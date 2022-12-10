@@ -8,20 +8,18 @@
 
 #include "Scene.h"
 #include "mat4.hpp"
-#include "Triangle.h"
 #include "tinyxml2.h"
 
 using namespace tinyxml2;
-using namespace std;
 
 class ParseError {};
 
 Scene::Scene(const char *xmlPath)
 {
-	vector< std::pair<vec4,vec4> > vertices;
-	map<int, mat4> translations;
-	map<int, mat4> rotations;
-	map<int, mat4> scalings;
+	std::vector< std::pair<vec4,vec4> > v;
+	std::map<int, mat4> translations;
+	std::map<int, mat4> rotations;
+	std::map<int, mat4> scalings;
 
 	const char *str;
 	XMLDocument xmlDoc;
@@ -63,11 +61,10 @@ Scene::Scene(const char *xmlPath)
 		str = pCamera->Attribute("type");
 
 		if (strcmp(str, "orthographic") == 0) {
-			cam.projectionType = 0;
-	
+			cam.projectionType = ORTHOGRAPHIC;	
 		}
 		else {
-			cam.projectionType = 1;
+			cam.projectionType = PERSPECTIVE;
 		}
 
 		camElement = pCamera->FirstChildElement("Position");
@@ -98,7 +95,7 @@ Scene::Scene(const char *xmlPath)
 
 		camElement = pCamera->FirstChildElement("OutputName");
 		str = camElement->GetText();
-		cam.outputFileName = string(str);
+		cam.outputFileName = str;
 
 		cameras.push_back(cam);
 
@@ -116,12 +113,12 @@ Scene::Scene(const char *xmlPath)
 		vec4 color;
 
 		str = pVertex->Attribute("position");
-		sscanf(str, "%lf %lf %lf", vertex[0], &vertex[1], &vertex[2]);
+		sscanf(str, "%lf %lf %lf", &vertex[0], &vertex[1], &vertex[2]);
 
 		str = pVertex->Attribute("color");
 		sscanf(str, "%lf %lf %lf", &color[0], &color[1], &color[2]);
 
-		vertices.push_back({vertex, color});
+		v.push_back({vertex, color});
 		colorsOfVertices.push_back(color);
 
 		pVertex = pVertex->NextSiblingElement("Vertex");
@@ -192,16 +189,19 @@ Scene::Scene(const char *xmlPath)
 		mat4 composite_transformation;
 		Mesh mesh;
 
-		pMesh->QueryIntAttribute("id", &mesh.id);
+		{
+			int zort;
+			pMesh->QueryIntAttribute("id", &zort);
+		}
 
 		// read projection type
 		str = pMesh->Attribute("type");
 
 		if (strcmp(str, "wireframe") == 0) {
-			mesh.type = 0;
+			mesh.type = WIREFRAME;
 		}
 		else {
-			mesh.type = 1;
+			mesh.type = SOLID;
 		}
 
 		// read mesh transformations
@@ -248,8 +248,8 @@ Scene::Scene(const char *xmlPath)
 			
 			if (result != EOF) {
 				mesh.triangles.push_back(Triangle{
-					{composite_transformation * vertices[v1].first, composite_transformation * vertices[v2].first, composite_transformation * vertices[v3].first},
-					{vertices[v1].second, vertices[v2].second, vertices[v3].second}
+					{composite_transformation * v[v1].first, composite_transformation * v[v2].first, composite_transformation * v[v3].first},
+					{v[v1].second, v[v2].second, v[v3].second}
 				});
 			}
 			row = strtok(NULL, "\n");
@@ -279,14 +279,14 @@ int Scene::makeBetweenZeroAnd255(double value)
 */
 void Scene::writeImageToPPMFile(Camera *camera)
 {
-	ofstream fout;
+	std::ofstream fout;
 
 	fout.open(camera->outputFileName.c_str());
 
-	fout << "P3" << endl;
-	fout << "# " << camera->outputFileName << endl;
-	fout << camera->horRes << " " << camera->verRes << endl;
-	fout << "255" << endl;
+	fout << "P3" << std::endl;
+	fout << "# " << camera->outputFileName << std::endl;
+	fout << camera->horRes << " " << camera->verRes << std::endl;
+	fout << "255" << std::endl;
 
 	for (int j = camera->verRes - 1; j >= 0; j--)
 	{
@@ -296,7 +296,7 @@ void Scene::writeImageToPPMFile(Camera *camera)
 				 << makeBetweenZeroAnd255(image[i][j][1]) << " "
 				 << makeBetweenZeroAnd255(image[i][j][2]) << " ";
 		}
-		fout << endl;
+		fout << std::endl;
 	}
 	fout.close();
 }
@@ -307,9 +307,9 @@ void Scene::writeImageToPPMFile(Camera *camera)
 	os_type == 2 		-> Windows
 	os_type == other	-> No conversion
 */
-void Scene::convertPPMToPNG(string ppmFileName, int osType)
+void Scene::convertPPMToPNG(std::string ppmFileName, int osType)
 {
-	string command;
+	std::string command;
 
 	// call command on Ubuntu
 	if (osType == 1)
