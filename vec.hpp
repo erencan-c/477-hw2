@@ -3,11 +3,9 @@
 
 #include <stdio.h>
 #include <array>
-#include <xmmintrin.h>
-#include <smmintrin.h>
 #include <math.h>
 #include <iostream>
-#include <intrin.h>
+#include <immintrin.h>
 
 #define EPISLON 1e-9
 #include <array>
