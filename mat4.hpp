@@ -9,169 +9,209 @@
 
 // typedef const mat4f cmat4f;
 
-typedef const struct mat4f mat4fc;
-typedef __m128 row4f;
-typedef const __m128 row4fc;
-typedef const float cfloat;
+typedef const struct mat4 mat4c;
+typedef __m256d row4;
+typedef const row4 row4c;
+typedef const double cdouble;
 
-struct mat4f {
+struct mat4 {
 public:
-    row4f row1;
-    row4f row2;
-    row4f row3;
-    row4f row4;
+    row4 data[4];
 
-    mat4f(row4fc r1, row4fc r2, row4fc r3, row4fc r4) {
-        row1 = r1;
-        row2 = r2;
-        row3 = r3;
-        row4 = r4;
+    mat4() {
+        
     }
 
-    static inline mat4f identity() {
-        return mat4f(row4fc{1.0f,0.0f,0.0f,0.0f}, row4fc{0.0f,1.0f,0.0f,0.0f}, row4fc{0.0f,0.0f,1.0f,0.0f}, row4fc{0.0f,0.0f,0.0f,1.0f});
+    mat4(row4c r1, row4c r2, row4c r3, row4c r4) {
+        data[0] = r1;
+        data[1] = r2;
+        data[2] = r3;
+        data[3] = r4;
     }
 
-    static inline mat4f transition(cfloat x, cfloat y, cfloat z) {
-        return mat4f(
-            row4f{1.0f, 0.0f, 0.0f, x},
-            row4f{0.0f, 1.0f, 0.0f, y},
-            row4f{0.0f, 0.0f, 1.0f, z},
-            row4f{0.0f, 0.0f, 0.0f, 1.0f}
+    vec4& operator[](int idx) {
+        return data[idx];
+    }
+
+    static inline mat4 identity() {
+        return mat4(row4c{1.0f,0.0f,0.0f,0.0f}, row4c{0.0f,1.0f,0.0f,0.0f}, row4c{0.0f,0.0f,1.0f,0.0f}, row4c{0.0f,0.0f,0.0f,1.0f});
+    }
+
+    static inline mat4 transition(cdouble x, cdouble y, cdouble z) {
+        return mat4(
+            row4{1.0f, 0.0f, 0.0f, x},
+            row4{0.0f, 1.0f, 0.0f, y},
+            row4{0.0f, 0.0f, 1.0f, z},
+            row4{0.0f, 0.0f, 0.0f, 1.0f}
         );
     }
+    static inline mat4 transition(arr4c arr) {
+        return mat4::transition(arr[0], arr[1], arr[2]);
+    }
 
-    static inline mat4f rotation_x(cfloat angle) {
-        cfloat s = std::sin(angle);
-        cfloat c = std::cos(angle);
-        return mat4f(
-            row4f{1.0f, 0.0f, 0.0f, 0.0f},
-            row4f{0.0f, c, -s, 0.0f},
-            row4f{0.0f, s, c, 0.0f},
-            row4f{0.0f, 0.0f, 0.0f, 1.0f}
+    static inline mat4 rotation_x(cdouble angle) {
+        cdouble s = std::sin(angle);
+        cdouble c = std::cos(angle);
+        return mat4(
+            row4{1.0f, 0.0f, 0.0f, 0.0f},
+            row4{0.0f, c, -s, 0.0f},
+            row4{0.0f, s, c, 0.0f},
+            row4{0.0f, 0.0f, 0.0f, 1.0f}
         );
     }
     
-    static inline mat4f rotation_y(cfloat angle) {
-        cfloat s = std::sin(angle);
-        cfloat c = std::cos(angle);
-        return mat4f(
-            row4f{c, 0.0f, s, 0.0f},
-            row4f{0.0f, 1.0f, 0.0f, 0.0f},
-            row4f{-s, 0.0f, c, 0.0f},
-            row4f{0.0f, 0.0f, 0.0f, 1.0f}
+    static inline mat4 rotation_y(cdouble angle) {
+        cdouble s = std::sin(angle);
+        cdouble c = std::cos(angle);
+        return mat4(
+            row4{c, 0.0f, s, 0.0f},
+            row4{0.0f, 1.0f, 0.0f, 0.0f},
+            row4{-s, 0.0f, c, 0.0f},
+            row4{0.0f, 0.0f, 0.0f, 1.0f}
         );
     }
 
-    static inline mat4f rotation_z(cfloat angle) {
-        cfloat s = std::sin(angle);
-        cfloat c = std::cos(angle);
-        return mat4f(
-            row4f{c, -s, 0.0f, 0.0f},
-            row4f{s, c, 0.0f, 0.0f},
-            row4f{0.0f, 0.0f, 1.0f, 0.0f},
-            row4f{0.0f, 0.0f, 0.0f, 1.0f}
+    static inline mat4 rotation_z(cdouble angle) {
+        cdouble s = std::sin(angle);
+        cdouble c = std::cos(angle);
+        return mat4(
+            row4{c, -s, 0.0f, 0.0f},
+            row4{s, c, 0.0f, 0.0f},
+            row4{0.0f, 0.0f, 1.0f, 0.0f},
+            row4{0.0f, 0.0f, 0.0f, 1.0f}
         );
     }
 
-    static inline mat4f scaling(cfloat x, cfloat y, cfloat z) {
-        return mat4f(
-            row4f{x, 0.0f, 0.0f, 0.0f},
-            row4f{0.0f, y, 0.0f, 0.0f},
-            row4f{0.0f, 0.0f, z, 0.0f},
-            row4f{0.0f, 0.0f, 0.0f, 1.0f}
+    static inline mat4 rotation(vec4c p2, cdouble angle) {
+        p2[3] = 0;
+        vec4c ux{p2[0], 0, 0, 0};
+        vec4c uy{0, p2[1], 0, 0};
+        vec4c uz{0, 0, p2[2], 0};
+        vec4c uprime = uy + uz;
+        cdouble len_uprime = len4f(uprime);
+        cdouble cosa = p2[3]/len_uprime;
+        cdouble sina = p2[2]/len_uprime;
+        mat4c rxa(
+            row4{1, 0, 0, 0},
+            row4{0, cosa, -sina, 0},
+            row4{0, sina, cosa, 0},
+            row4{0, 0, 0, 1}
         );
+
+        cdouble lenu = len4f(p2);
+        cdouble cosb = (sqrt(p2[1]*p2[1] + p2[2]*p2[2]))/lenu;
+        cdouble sinb = p2[0]/lenu;
+
+        mat4c ryb(
+            row4{cosb, 0, -sinb, 0},
+            row4{0,1,0,0},
+            row4{sinb, 0, cosb, 0},
+            row4{0,0,0,1}
+        );
+        return rxa.inv() * ryb * mat4::rotation_z(angle) * ryb.inv() * rxa;
     }
 
-    mat4f operator+(mat4fc rhs) const;
-    mat4f operator-(mat4fc rhs) const;
-    mat4f operator*(mat4fc rhs) const;
-    mat4f operator/(mat4fc rhs) const;
-    vec4f operator*(vec4fc rhs) const;
-    mat4f mul(mat4fc rhs) const;
-    mat4f operator-() const;
-    mat4f T() const;
+    static inline mat4 scaling(cdouble x, cdouble y, cdouble z) {
+        return mat4(
+            row4{x, 0.0f, 0.0f, 0.0f},
+            row4{0.0f, y, 0.0f, 0.0f},
+            row4{0.0f, 0.0f, z, 0.0f},
+            row4{0.0f, 0.0f, 0.0f, 1.0f}
+        );
+    }
+    static inline mat4 scaling(arr4c arr) {
+        return mat4::scaling(arr[0], arr[1], arr[2]);
+    }
+
+    mat4 operator+(mat4c rhs) const;
+    mat4 operator-(mat4c rhs) const;
+    mat4 operator*(mat4c rhs) const;
+    mat4 operator/(mat4c rhs) const;
+    vec4 operator*(vec4c rhs) const;
+    mat4 mul(mat4c rhs) const;
+    mat4 operator-() const;
+    mat4 T() const;
     float det() const;
-    mat4f inv() const;
+    mat4 inv() const;
 
-    friend std::ostream& operator<<(std::ostream& os, mat4fc& mat) {
+    friend std::ostream& operator<<(std::ostream& os, mat4c& mat) {
         os << "mat4[\n";
-        os << "\t[" << mat.row1[0] << ",\t" << mat.row1[1] << ",\t" << mat.row1[2] << ",\t" << mat.row1[3] << "\t],\n";
-        os << "\t[" << mat.row2[0] << ",\t" << mat.row2[1] << ",\t" << mat.row2[2] << ",\t" << mat.row2[3] << "\t],\n";
-        os << "\t[" << mat.row3[0] << ",\t" << mat.row3[1] << ",\t" << mat.row3[2] << ",\t" << mat.row3[3] << "\t],\n";
-        os << "\t[" << mat.row4[0] << ",\t" << mat.row4[1] << ",\t" << mat.row4[2] << ",\t" << mat.row4[3] << "\t]\n";
+        os << "\t[" << mat.data[0][0] << ",\t" << mat.data[0][1] << ",\t" << mat.data[0][2] << ",\t" << mat.data[0][3] << "\t],\n";
+        os << "\t[" << mat.data[1][0] << ",\t" << mat.data[1][1] << ",\t" << mat.data[1][2] << ",\t" << mat.data[1][3] << "\t],\n";
+        os << "\t[" << mat.data[2][0] << ",\t" << mat.data[2][1] << ",\t" << mat.data[2][2] << ",\t" << mat.data[2][3] << "\t],\n";
+        os << "\t[" << mat.data[3][0] << ",\t" << mat.data[3][1] << ",\t" << mat.data[3][2] << ",\t" << mat.data[3][3] << "\t]\n";
         return os << "]";
     }
 };
 
-inline mat4f mat4f::operator+(mat4fc rhs) const {
-    return mat4f(row1 + rhs.row1, row2 + rhs.row2, row3 + rhs.row3, row4 + rhs.row4);
+inline mat4 mat4::operator+(mat4c rhs) const {
+    return mat4(data[0] + rhs.data[0], data[1] + rhs.data[1], data[2] + rhs.data[2], data[3] + rhs.data[3]);
 }
 
-inline mat4f mat4f::operator-(mat4fc rhs) const {
-    return mat4f(row1 - rhs.row1, row2 - rhs.row2, row3 - rhs.row3, row4 - rhs.row4);
+inline mat4 mat4::operator-(mat4c rhs) const {
+    return mat4(data[0] - rhs.data[0], data[1] - rhs.data[1], data[2] - rhs.data[2], data[3] - rhs.data[3]);
 }
 
-inline mat4f mat4f::mul(mat4fc rhs) const {
-    return mat4f(row1 * rhs.row1, row2 * rhs.row2, row3 * rhs.row3, row4 * rhs.row4);
+inline mat4 mat4::mul(mat4c rhs) const {
+    return mat4(data[0] * rhs.data[0], data[1] * rhs.data[1], data[2] * rhs.data[2], data[3] * rhs.data[3]);
 }
 
-inline mat4f mat4f::operator/(mat4fc rhs) const {
-    return mat4f(row1 / rhs.row1, row2 / rhs.row2, row3 / rhs.row3, row4 / rhs.row4);
+inline mat4 mat4::operator/(mat4c rhs) const {
+    return mat4(data[0] / rhs.data[0], data[1] / rhs.data[1], data[2] / rhs.data[2], data[3] / rhs.data[3]);
 }
 
-inline vec4f mat4f::operator*(vec4fc rhs) const {
-    return vec4f{
-        dot4f(row1, rhs),
-        dot4f(row2, rhs),
-        dot4f(row3, rhs),
-        dot4f(row4, rhs)
+inline vec4 mat4::operator*(vec4c rhs) const {
+    return vec4{
+        dot4(data[0], rhs),
+        dot4(data[1], rhs),
+        dot4(data[2], rhs),
+        dot4(data[3], rhs)
     };
 }
 
-static inline __m128 linear_combination(row4fc a, mat4fc b) {
-    row4f result;
-    result = _mm_shuffle_ps(a, a, 0) * b.row1;
-    result += _mm_shuffle_ps(a, a, 0x55) * b.row2;
-    result += _mm_shuffle_ps(a, a, 0xAA) * b.row3;
-    result += _mm_shuffle_ps(a, a, 0xFF) * b.row4;
+static inline row4 linear_combination(row4c a, mat4c b) {
+    row4 result;
+    result = _mm256_shuffle_pd(a, a, 0) * b.data[0];
+    result += _mm256_shuffle_pd(a, a, 0x55) * b.data[1];
+    result += _mm256_shuffle_pd(a, a, 0xAA) * b.data[2];
+    result += _mm256_shuffle_pd(a, a, 0xFF) * b.data[3];
     return result;
 }
 
-inline mat4f mat4f::operator*(mat4fc rhs) const {
-    row4fc out1 = linear_combination(row1, rhs);
-    row4fc out2 = linear_combination(row2, rhs);
-    row4fc out3 = linear_combination(row3, rhs);
-    row4fc out4 = linear_combination(row4, rhs);
+inline mat4 mat4::operator*(mat4c rhs) const {
+    row4c out1 = linear_combination(data[0], rhs);
+    row4c out2 = linear_combination(data[1], rhs);
+    row4c out3 = linear_combination(data[2], rhs);
+    row4c out4 = linear_combination(data[3], rhs);
 
-    return mat4f(out1, out2, out3, out4);
+    return mat4(out1, out2, out3, out4);
 }
 
-inline mat4f mat4f::operator-() const {
-    return mat4f(-row1, -row2, -row3, -row4);
+inline mat4 mat4::operator-() const {
+    return mat4(-data[0], -data[1], -data[2], -data[3]);
 }
 
-inline mat4f mat4f::T() const {
-    return mat4f(
-        row4f{row1[0], row2[0], row3[0], row4[0]},
-        row4f{row1[1], row2[1], row3[1], row4[1]},
-        row4f{row1[2], row2[2], row3[2], row4[2]},
-        row4f{row1[3], row2[3], row3[3], row4[3]}
+inline mat4 mat4::T() const {
+    return mat4(
+        row4{data[0][0], data[1][0], data[2][0], data[3][0]},
+        row4{data[0][1], data[1][1], data[2][1], data[3][1]},
+        row4{data[0][2], data[1][2], data[2][2], data[3][2]},
+        row4{data[0][3], data[1][3], data[2][3], data[3][3]}
     );
 }
 
 /// @brief The `mat` is interpreted as a 2x2 matrix 
 /// @param mat
-static inline row4f inv2f(row4fc mat) {
-    return row4fc{mat[3], -mat[1], -mat[2], mat[0]}/(mat[0]*mat[3] - mat[1]*mat[2]);
+static inline row4 inv2f(row4c mat) {
+    return row4c{mat[3], -mat[1], -mat[2], mat[0]}/(mat[0]*mat[3] - mat[1]*mat[2]);
 }
 
-static inline float det2f(row4fc mat) {
+static inline float det2f(row4c mat) {
     return 1.0f/(mat[0]*mat[3] - mat[1]*mat[2]);
 }
 
-static inline row4f mul2f(row4fc lhs, row4fc rhs) {
-    return row4f{
+static inline row4 mul2f(row4c lhs, row4c rhs) {
+    return row4{
         lhs[0]*rhs[0] + lhs[1]*rhs[2],
         lhs[0]*rhs[1] + lhs[1]*rhs[3],
         lhs[2]*rhs[0] + lhs[3]*rhs[2],
@@ -179,34 +219,34 @@ static inline row4f mul2f(row4fc lhs, row4fc rhs) {
     };
 }
 
-inline float mat4f::det() const {
-    row4fc a0 = {row1[0], row1[1], row2[0], row2[1]};
-    row4fc a1 = {row1[2], row1[3], row2[2], row2[3]};
-    row4fc a2 = {row3[0], row3[1], row4[0], row4[1]};
-    row4fc a3 = {row3[2], row3[3], row4[2], row4[3]};
+inline float mat4::det() const {
+    row4c a0 = {data[0][0], data[0][1], data[1][0], data[1][1]};
+    row4c a1 = {data[0][2], data[0][3], data[1][2], data[1][3]};
+    row4c a2 = {data[2][0], data[2][1], data[3][0], data[3][1]};
+    row4c a3 = {data[2][2], data[2][3], data[3][2], data[3][3]};
 
     return det2f(a0 - mul2f(mul2f(a1,inv2f(a3)),a2)) * det2f(a3);
 }
 
 //TODO: Improve the performance
-inline mat4f mat4f::inv() const {
-    row4fc A = {row1[0], row1[1], row2[0], row2[1]};
-    row4fc B = {row1[2], row1[3], row2[2], row2[3]};
-    row4fc C = {row3[0], row3[1], row4[0], row4[1]};
-    row4fc D = {row3[2], row3[3], row4[2], row4[3]};
+inline mat4 mat4::inv() const {
+    row4c A = {data[0][0], data[0][1], data[1][0], data[1][1]};
+    row4c B = {data[0][2], data[0][3], data[1][2], data[1][3]};
+    row4c C = {data[2][0], data[2][1], data[3][0], data[3][1]};
+    row4c D = {data[2][2], data[2][3], data[3][2], data[3][3]};
 
-    row4fc invA = inv2f(A);
-    row4fc invDCAB = inv2f(D - mul2f(C, mul2f(invA, B)));
+    row4c invA = inv2f(A);
+    row4c invDCAB = inv2f(D - mul2f(C, mul2f(invA, B)));
 
-    row4fc b0 = invA + mul2f((invA, B), mul2f(invDCAB, mul2f(C, invA)));
-    row4fc b1 = -mul2f(mul2f(invA, B), invDCAB);
-    row4fc b2 = -mul2f(invDCAB, mul2f(C, invA));
-    row4fc b3 = invDCAB;
-    return mat4f(
-        row4f{b0[0], b0[1], b1[0], b1[1]},
-        row4f{b0[2], b0[3], b1[2], b1[3]},
-        row4f{b2[0], b2[1], b3[0], b3[1]},
-        row4f{b2[2], b2[3], b3[2], b3[3]}
+    row4c b0 = invA + mul2f((invA, B), mul2f(invDCAB, mul2f(C, invA)));
+    row4c b1 = -mul2f(mul2f(invA, B), invDCAB);
+    row4c b2 = -mul2f(invDCAB, mul2f(C, invA));
+    row4c b3 = invDCAB;
+    return mat4(
+        row4{b0[0], b0[1], b1[0], b1[1]},
+        row4{b0[2], b0[3], b1[2], b1[3]},
+        row4{b2[0], b2[1], b3[0], b3[1]},
+        row4{b2[2], b2[3], b3[2], b3[3]}
     );
 }
 

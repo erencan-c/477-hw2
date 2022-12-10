@@ -1,7 +1,7 @@
 #ifndef __CAMERA_H__
 #define __CAMERA_H__
 
-#include "Vec3.h"
+#include "vec.hpp"
 #include <string>
 
 using namespace std;
@@ -12,11 +12,11 @@ class Camera
 public:
     int cameraId;
     int projectionType; // 1 for perspective, 0 for orthographic
-    Vec3 pos;
-    Vec3 gaze;
-    Vec3 u;
-    Vec3 v;
-    Vec3 w;
+    vec4 pos;
+    vec4 gaze;
+    vec4 u;
+    vec4 v;
+    vec4 w;
     double left, right, bottom, top;
     double near;
     double far;
@@ -28,8 +28,8 @@ public:
 
     Camera(int cameraId,
            int projectionType,
-           Vec3 pos, Vec3 gaze,
-           Vec3 u, Vec3 v, Vec3 w,
+           vec4 pos, vec4 gaze,
+           vec4 u, vec4 v, vec4 w,
            double left, double right, double bottom, double top,
            double near, double far,
            int horRes, int verRes,

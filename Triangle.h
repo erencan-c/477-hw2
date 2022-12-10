@@ -1,24 +1,11 @@
 #ifndef __TRIANGLE_H__
 #define __TRIANGLE_H__
 
+#include "vec.hpp"
 
-class Triangle
-{
-public:
-    int vertexIds[3];
-
-    Triangle();
-    Triangle(int vid1, int vid2, int vid3);
-    Triangle(const Triangle &other);
-
-    int getFirstVertexId();
-    int getSecondVertexId();
-    int getThirdVertexId();
-
-    void setFirstVertexId(int vid);
-    void setSecondVertexId(int vid);
-    void setThirdVertexId(int vid);
+struct Triangle {
+    vec4 vertices[3];
+    vec4 colors[3];
 };
-
 
 #endif

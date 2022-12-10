@@ -4,36 +4,25 @@
 #include <cstring>
 #include <fstream>
 #include <cmath>
+#include <map>
 
 #include "Scene.h"
-#include "Camera.h"
-#include "Color.h"
-#include "Mesh.h"
-#include "Rotation.h"
-#include "Scaling.h"
-#include "Translation.h"
+#include "mat4.hpp"
 #include "Triangle.h"
-#include "Vec3.h"
 #include "tinyxml2.h"
-#include "Helpers.h"
 
 using namespace tinyxml2;
 using namespace std;
 
-/*
-	Transformations, clipping, culling, rasterization are done here.
-	You may define helper functions.
-*/
-void Scene::forwardRenderingPipeline(Camera *camera)
-{
-	// TODO: Implement this function.
-}
+class ParseError {};
 
-/*
-	Parses XML file
-*/
 Scene::Scene(const char *xmlPath)
 {
+	vector< std::pair<vec4,vec4> > vertices;
+	map<int, mat4> translations;
+	map<int, mat4> rotations;
+	map<int, mat4> scalings;
+
 	const char *str;
 	XMLDocument xmlDoc;
 	XMLElement *pElement;
@@ -45,7 +34,7 @@ Scene::Scene(const char *xmlPath)
 	// read background color
 	pElement = pRoot->FirstChildElement("BackgroundColor");
 	str = pElement->GetText();
-	sscanf(str, "%lf %lf %lf", &backgroundColor.r, &backgroundColor.g, &backgroundColor.b);
+	sscanf(str, "%lf %lf %lf", &background_color[0], &background_color[1], &background_color[2]);
 
 	// read culling
 	pElement = pRoot->FirstChildElement("Culling");
@@ -53,10 +42,10 @@ Scene::Scene(const char *xmlPath)
 		str = pElement->GetText();
 		
 		if (strcmp(str, "enabled") == 0) {
-			cullingEnabled = true;
+			culling_enabled = true;
 		}
 		else {
-			cullingEnabled = false;
+			culling_enabled = false;
 		}
 	}
 
@@ -66,49 +55,50 @@ Scene::Scene(const char *xmlPath)
 	XMLElement *camElement;
 	while (pCamera != NULL)
 	{
-		Camera *cam = new Camera();
+		Camera cam;
 
-		pCamera->QueryIntAttribute("id", &cam->cameraId);
+		pCamera->QueryIntAttribute("id", &cam.cameraId);
 
 		// read projection type
 		str = pCamera->Attribute("type");
 
 		if (strcmp(str, "orthographic") == 0) {
-			cam->projectionType = 0;
+			cam.projectionType = 0;
+	
 		}
 		else {
-			cam->projectionType = 1;
+			cam.projectionType = 1;
 		}
 
 		camElement = pCamera->FirstChildElement("Position");
 		str = camElement->GetText();
-		sscanf(str, "%lf %lf %lf", &cam->pos.x, &cam->pos.y, &cam->pos.z);
+		sscanf(str, "%lf %lf %lf", &cam.pos[0], &cam.pos[1], &cam.pos[2]);
 
 		camElement = pCamera->FirstChildElement("Gaze");
 		str = camElement->GetText();
-		sscanf(str, "%lf %lf %lf", &cam->gaze.x, &cam->gaze.y, &cam->gaze.z);
+		sscanf(str, "%lf %lf %lf", &cam.gaze[0], &cam.gaze[1], &cam.gaze[2]);
 
 		camElement = pCamera->FirstChildElement("Up");
 		str = camElement->GetText();
-		sscanf(str, "%lf %lf %lf", &cam->v.x, &cam->v.y, &cam->v.z);
+		sscanf(str, "%lf %lf %lf", &cam.v[0], &cam.v[1], &cam.v[2]);
 
-		cam->gaze = normalizeVec3(cam->gaze);
-		cam->u = crossProductVec3(cam->gaze, cam->v);
-		cam->u = normalizeVec3(cam->u);
+		cam.gaze = normalize4(cam.gaze);
+		cam.u = cross4(cam.gaze, cam.v);
+		cam.u = normalize4(cam.u);
 
-		cam->w = inverseVec3(cam->gaze);
-		cam->v = crossProductVec3(cam->u, cam->gaze);
-		cam->v = normalizeVec3(cam->v);
+		cam.w = -cam.gaze;
+		cam.v = cross4(cam.u, cam.gaze);
+		cam.v = normalize4(cam.v);
 
 		camElement = pCamera->FirstChildElement("ImagePlane");
 		str = camElement->GetText();
 		sscanf(str, "%lf %lf %lf %lf %lf %lf %d %d",
-			   &cam->left, &cam->right, &cam->bottom, &cam->top,
-			   &cam->near, &cam->far, &cam->horRes, &cam->verRes);
+			   &cam.left, &cam.right, &cam.bottom, &cam.top,
+			   &cam.near, &cam.far, &cam.horRes, &cam.verRes);
 
 		camElement = pCamera->FirstChildElement("OutputName");
 		str = camElement->GetText();
-		cam->outputFileName = string(str);
+		cam.outputFileName = string(str);
 
 		cameras.push_back(cam);
 
@@ -122,18 +112,16 @@ Scene::Scene(const char *xmlPath)
 
 	while (pVertex != NULL)
 	{
-		Vec3 *vertex = new Vec3();
-		Color *color = new Color();
-
-		vertex->colorId = vertexId;
+		vec4 vertex;
+		vec4 color;
 
 		str = pVertex->Attribute("position");
-		sscanf(str, "%lf %lf %lf", &vertex->x, &vertex->y, &vertex->z);
+		sscanf(str, "%lf %lf %lf", vertex[0], &vertex[1], &vertex[2]);
 
 		str = pVertex->Attribute("color");
-		sscanf(str, "%lf %lf %lf", &color->r, &color->g, &color->b);
+		sscanf(str, "%lf %lf %lf", &color[0], &color[1], &color[2]);
 
-		vertices.push_back(vertex);
+		vertices.push_back({vertex, color});
 		colorsOfVertices.push_back(color);
 
 		pVertex = pVertex->NextSiblingElement("Vertex");
@@ -146,14 +134,15 @@ Scene::Scene(const char *xmlPath)
 	XMLElement *pTranslation = pElement->FirstChildElement("Translation");
 	while (pTranslation != NULL)
 	{
-		Translation *translation = new Translation();
+		int id;
+		arr4 xyz;
 
-		pTranslation->QueryIntAttribute("id", &translation->translationId);
+		pTranslation->QueryIntAttribute("id", &id);
 
 		str = pTranslation->Attribute("value");
-		sscanf(str, "%lf %lf %lf", &translation->tx, &translation->ty, &translation->tz);
+		sscanf(str, "%lf %lf %lf", &xyz[0], &xyz[1], &xyz[2]);
 
-		translations.push_back(translation);
+		translations[id] = mat4::transition(xyz);
 
 		pTranslation = pTranslation->NextSiblingElement("Translation");
 	}
@@ -163,13 +152,14 @@ Scene::Scene(const char *xmlPath)
 	XMLElement *pScaling = pElement->FirstChildElement("Scaling");
 	while (pScaling != NULL)
 	{
-		Scaling *scaling = new Scaling();
+		int id;
+		arr4 xyz;
 
-		pScaling->QueryIntAttribute("id", &scaling->scalingId);
+		pScaling->QueryIntAttribute("id", &id);
 		str = pScaling->Attribute("value");
-		sscanf(str, "%lf %lf %lf", &scaling->sx, &scaling->sy, &scaling->sz);
+		sscanf(str, "%lf %lf %lf", &xyz[0], &xyz[1], &xyz[2]);
 
-		scalings.push_back(scaling);
+		scalings[id] = mat4::scaling(xyz);
 
 		pScaling = pScaling->NextSiblingElement("Scaling");
 	}
@@ -179,13 +169,15 @@ Scene::Scene(const char *xmlPath)
 	XMLElement *pRotation = pElement->FirstChildElement("Rotation");
 	while (pRotation != NULL)
 	{
-		Rotation *rotation = new Rotation();
+		int id;
+		double angle;
+		vec4 u;
 
-		pRotation->QueryIntAttribute("id", &rotation->rotationId);
+		pRotation->QueryIntAttribute("id", &id);
 		str = pRotation->Attribute("value");
-		sscanf(str, "%lf %lf %lf %lf", &rotation->angle, &rotation->ux, &rotation->uy, &rotation->uz);
+		sscanf(str, "%lf %lf %lf %lf", &angle, &u[0], &u[1], &u[2]);
 
-		rotations.push_back(rotation);
+		rotations[id] = mat4::rotation(u, angle);
 
 		pRotation = pRotation->NextSiblingElement("Rotation");
 	}
@@ -197,18 +189,19 @@ Scene::Scene(const char *xmlPath)
 	XMLElement *meshElement;
 	while (pMesh != NULL)
 	{
-		Mesh *mesh = new Mesh();
+		mat4 composite_transformation;
+		Mesh mesh;
 
-		pMesh->QueryIntAttribute("id", &mesh->meshId);
+		pMesh->QueryIntAttribute("id", &mesh.id);
 
 		// read projection type
 		str = pMesh->Attribute("type");
 
 		if (strcmp(str, "wireframe") == 0) {
-			mesh->type = 0;
+			mesh.type = 0;
 		}
 		else {
-			mesh->type = 1;
+			mesh.type = 1;
 		}
 
 		// read mesh transformations
@@ -217,19 +210,28 @@ Scene::Scene(const char *xmlPath)
 
 		while (pTransformation != NULL)
 		{
-			char transformationType;
-			int transformationId;
+			char type;
+			int id;
 
 			str = pTransformation->GetText();
-			sscanf(str, "%c %d", &transformationType, &transformationId);
+			sscanf(str, "%c %d", &type, &id);
 
-			mesh->transformationTypes.push_back(transformationType);
-			mesh->transformationIds.push_back(transformationId);
+			switch(type) {
+				case 'r':
+					composite_transformation = rotations[id] * composite_transformation;
+				break;
+				case 't':
+					composite_transformation = translations[id] * composite_transformation;
+				break;
+				case 's':
+					composite_transformation = scalings[id] * composite_transformation;
+				break;
+				default:
+					throw ParseError();
+			}
 
 			pTransformation = pTransformation->NextSiblingElement("Transformation");
 		}
-
-		mesh->numberOfTransformations = mesh->transformationIds.size();
 
 		// read mesh faces
 		char *row;
@@ -245,47 +247,16 @@ Scene::Scene(const char *xmlPath)
 			int result = sscanf(row, "%d %d %d", &v1, &v2, &v3);
 			
 			if (result != EOF) {
-				mesh->triangles.push_back(Triangle(v1, v2, v3));
+				mesh.triangles.push_back(Triangle{
+					{composite_transformation * vertices[v1].first, composite_transformation * vertices[v2].first, composite_transformation * vertices[v3].first},
+					{vertices[v1].second, vertices[v2].second, vertices[v3].second}
+				});
 			}
 			row = strtok(NULL, "\n");
 		}
-		mesh->numberOfTriangles = mesh->triangles.size();
 		meshes.push_back(mesh);
 
 		pMesh = pMesh->NextSiblingElement("Mesh");
-	}
-}
-
-/*
-	Initializes image with background color
-*/
-void Scene::initializeImage(Camera *camera)
-{
-	if (this->image.empty())
-	{
-		for (int i = 0; i < camera->horRes; i++)
-		{
-			vector<Color> rowOfColors;
-
-			for (int j = 0; j < camera->verRes; j++)
-			{
-				rowOfColors.push_back(this->backgroundColor);
-			}
-
-			this->image.push_back(rowOfColors);
-		}
-	}
-	else
-	{
-		for (int i = 0; i < camera->horRes; i++)
-		{
-			for (int j = 0; j < camera->verRes; j++)
-			{
-				this->image[i][j].r = this->backgroundColor.r;
-				this->image[i][j].g = this->backgroundColor.g;
-				this->image[i][j].b = this->backgroundColor.b;
-			}
-		}
 	}
 }
 
@@ -304,7 +275,7 @@ int Scene::makeBetweenZeroAnd255(double value)
 }
 
 /*
-	Writes contents of image (Color**) into a PPM file.
+	Writes contents of image (vec4**) into a PPM file.
 */
 void Scene::writeImageToPPMFile(Camera *camera)
 {
@@ -321,9 +292,9 @@ void Scene::writeImageToPPMFile(Camera *camera)
 	{
 		for (int i = 0; i < camera->horRes; i++)
 		{
-			fout << makeBetweenZeroAnd255(this->image[i][j].r) << " "
-				 << makeBetweenZeroAnd255(this->image[i][j].g) << " "
-				 << makeBetweenZeroAnd255(this->image[i][j].b) << " ";
+			fout << makeBetweenZeroAnd255(image[i][j][0]) << " "
+				 << makeBetweenZeroAnd255(image[i][j][1]) << " "
+				 << makeBetweenZeroAnd255(image[i][j][2]) << " ";
 		}
 		fout << endl;
 	}
