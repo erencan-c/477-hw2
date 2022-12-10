@@ -55,16 +55,19 @@ Scene::Scene(const char *xmlPath)
 	{
 		Camera cam;
 
-		pCamera->QueryIntAttribute("id", &cam.cameraId);
+		{
+			int zort;
+			pCamera->QueryIntAttribute("id", &zort); 
+		}
 
 		// read projection type
 		str = pCamera->Attribute("type");
 
 		if (strcmp(str, "orthographic") == 0) {
-			cam.projectionType = ORTHOGRAPHIC;	
+			cam.projection_type = ORTHOGRAPHIC;
 		}
 		else {
-			cam.projectionType = PERSPECTIVE;
+			cam.projection_type = PERSPECTIVE;
 		}
 
 		camElement = pCamera->FirstChildElement("Position");
@@ -91,11 +94,11 @@ Scene::Scene(const char *xmlPath)
 		str = camElement->GetText();
 		sscanf(str, "%lf %lf %lf %lf %lf %lf %d %d",
 			   &cam.left, &cam.right, &cam.bottom, &cam.top,
-			   &cam.near, &cam.far, &cam.horRes, &cam.verRes);
+			   &cam.near, &cam.far, &cam.width, &cam.height);
 
 		camElement = pCamera->FirstChildElement("OutputName");
 		str = camElement->GetText();
-		cam.outputFileName = str;
+		cam.output_file_name = str;
 
 		cameras.push_back(cam);
 
@@ -119,7 +122,6 @@ Scene::Scene(const char *xmlPath)
 		sscanf(str, "%lf %lf %lf", &color[0], &color[1], &color[2]);
 
 		v.push_back({vertex, color});
-		colorsOfVertices.push_back(color);
 
 		pVertex = pVertex->NextSiblingElement("Vertex");
 
@@ -258,47 +260,6 @@ Scene::Scene(const char *xmlPath)
 
 		pMesh = pMesh->NextSiblingElement("Mesh");
 	}
-}
-
-/*
-	If given value is less than 0, converts value to 0.
-	If given value is more than 255, converts value to 255.
-	Otherwise returns value itself.
-*/
-int Scene::makeBetweenZeroAnd255(double value)
-{
-	if (value >= 255.0)
-		return 255;
-	if (value <= 0.0)
-		return 0;
-	return (int)(value);
-}
-
-/*
-	Writes contents of image (vec4**) into a PPM file.
-*/
-void Scene::writeImageToPPMFile(Camera *camera)
-{
-	std::ofstream fout;
-
-	fout.open(camera->outputFileName.c_str());
-
-	fout << "P3" << std::endl;
-	fout << "# " << camera->outputFileName << std::endl;
-	fout << camera->horRes << " " << camera->verRes << std::endl;
-	fout << "255" << std::endl;
-
-	for (int j = camera->verRes - 1; j >= 0; j--)
-	{
-		for (int i = 0; i < camera->horRes; i++)
-		{
-			fout << makeBetweenZeroAnd255(image[i][j][0]) << " "
-				 << makeBetweenZeroAnd255(image[i][j][1]) << " "
-				 << makeBetweenZeroAnd255(image[i][j][2]) << " ";
-		}
-		fout << std::endl;
-	}
-	fout.close();
 }
 
 /*

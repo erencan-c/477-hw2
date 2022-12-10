@@ -30,8 +30,7 @@ struct Mesh
 
 struct Camera
 {
-    int cameraId;
-    ProjectionType projectionType;
+    ProjectionType projection_type;
     vec4 pos;
     vec4 gaze;
     vec4 u;
@@ -40,9 +39,9 @@ struct Camera
     double left, right, bottom, top;
     double near;
     double far;
-    int horRes;
-    int verRes;
-    std::string outputFileName;
+    int width;
+    int height;
+    std::string output_file_name;
 };
 
 #endif
