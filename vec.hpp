@@ -41,7 +41,7 @@ static inline vec4 cross4(vec4c lhs, vec4c rhs) {
 }
 
 static inline float len4f(vec4c self) {
-   return sqrtf(dot4(self,self));
+   return sqrt(dot4(self,self));
 }
 
 static inline vec4 normalize4(vec4c self) {

@@ -19,7 +19,7 @@ public:
     row4 data[4];
 
     mat4() {
-        
+        *this = mat4::identity();
     }
 
     mat4(row4c r1, row4c r2, row4c r3, row4c r4) {
@@ -87,10 +87,10 @@ public:
         vec4c ux{p2[0], 0, 0, 0};
         vec4c uy{0, p2[1], 0, 0};
         vec4c uz{0, 0, p2[2], 0};
-        vec4c uprime = uy + uz;
+        vec4c uprime = vec4{0, p2[1], p2[2], 0};
         cdouble len_uprime = len4f(uprime);
-        cdouble cosa = p2[3]/len_uprime;
-        cdouble sina = p2[2]/len_uprime;
+        cdouble cosa = p2[2]/len_uprime;
+        cdouble sina = p2[1]/len_uprime;
         mat4c rxa(
             row4{1, 0, 0, 0},
             row4{0, cosa, -sina, 0},
@@ -179,12 +179,21 @@ static inline row4 linear_combination(row4c a, mat4c b) {
 }
 
 inline mat4 mat4::operator*(mat4c rhs) const {
-    row4c out1 = linear_combination(data[0], rhs);
-    row4c out2 = linear_combination(data[1], rhs);
-    row4c out3 = linear_combination(data[2], rhs);
-    row4c out4 = linear_combination(data[3], rhs);
+    // row4c out1 = linear_combination(data[0], rhs);
+    // row4c out2 = linear_combination(data[1], rhs);
+    // row4c out3 = linear_combination(data[2], rhs);
+    // row4c out4 = linear_combination(data[3], rhs);
 
-    return mat4(out1, out2, out3, out4);
+    // return mat4(out1, out2, out3, out4);
+
+    mat4c rhst = rhs.T();
+
+    return mat4(
+        row4{dot4(data[0], rhst.data[0]), dot4(data[0], rhst.data[1]), dot4(data[0], rhst.data[2]), dot4(data[0], rhst.data[3])},
+        row4{dot4(data[1], rhst.data[0]), dot4(data[1], rhst.data[1]), dot4(data[1], rhst.data[2]), dot4(data[1], rhst.data[3])},
+        row4{dot4(data[2], rhst.data[0]), dot4(data[2], rhst.data[1]), dot4(data[2], rhst.data[2]), dot4(data[2], rhst.data[3])},
+        row4{dot4(data[3], rhst.data[0]), dot4(data[3], rhst.data[1]), dot4(data[3], rhst.data[2]), dot4(data[3], rhst.data[3])}
+    );
 }
 
 inline mat4 mat4::operator-() const {
@@ -230,24 +239,50 @@ inline float mat4::det() const {
 
 //TODO: Improve the performance
 inline mat4 mat4::inv() const {
-    row4c A = {data[0][0], data[0][1], data[1][0], data[1][1]};
-    row4c B = {data[0][2], data[0][3], data[1][2], data[1][3]};
-    row4c C = {data[2][0], data[2][1], data[3][0], data[3][1]};
-    row4c D = {data[2][2], data[2][3], data[3][2], data[3][3]};
+    cdouble A2323 = data[2][2] * data[3][3] - data[2][3] * data[3][2];
+    cdouble A1323 = data[2][1] * data[3][3] - data[2][3] * data[3][1];
+    cdouble A1223 = data[2][1] * data[3][2] - data[2][2] * data[3][1];
+    cdouble A0323 = data[2][0] * data[3][3] - data[2][3] * data[3][0];
+    cdouble A0223 = data[2][0] * data[3][2] - data[2][2] * data[3][0];
+    cdouble A0123 = data[2][0] * data[3][1] - data[2][1] * data[3][0];
+    cdouble A2313 = data[1][2] * data[3][3] - data[1][3] * data[3][2];
+    cdouble A1313 = data[1][1] * data[3][3] - data[1][3] * data[3][1];
+    cdouble A1213 = data[1][1] * data[3][2] - data[1][2] * data[3][1];
+    cdouble A2312 = data[1][2] * data[2][3] - data[1][3] * data[2][2];
+    cdouble A1312 = data[1][1] * data[2][3] - data[1][3] * data[2][1];
+    cdouble A1212 = data[1][1] * data[2][2] - data[1][2] * data[2][1];
+    cdouble A0313 = data[1][0] * data[3][3] - data[1][3] * data[3][0];
+    cdouble A0213 = data[1][0] * data[3][2] - data[1][2] * data[3][0];
+    cdouble A0312 = data[1][0] * data[2][3] - data[1][3] * data[2][0];
+    cdouble A0212 = data[1][0] * data[2][2] - data[1][2] * data[2][0];
+    cdouble A0113 = data[1][0] * data[3][1] - data[1][1] * data[3][0];
+    cdouble A0112 = data[1][0] * data[2][1] - data[1][1] * data[2][0];
 
-    row4c invA = inv2f(A);
-    row4c invDCAB = inv2f(D - mul2f(C, mul2f(invA, B)));
+    cdouble det = 1 / (data[0][0] * ( data[1][1] * A2323 - data[1][2] * A1323 + data[1][3] * A1223 )
+        - data[0][1] * ( data[1][0] * A2323 - data[1][2] * A0323 + data[1][3] * A0223 )
+        + data[0][2] * ( data[1][0] * A1323 - data[1][1] * A0323 + data[1][3] * A0123 )
+        - data[0][3] * ( data[1][0] * A1223 - data[1][1] * A0223 + data[1][2] * A0123 ));
 
-    row4c b0 = invA + mul2f((invA, B), mul2f(invDCAB, mul2f(C, invA)));
-    row4c b1 = -mul2f(mul2f(invA, B), invDCAB);
-    row4c b2 = -mul2f(invDCAB, mul2f(C, invA));
-    row4c b3 = invDCAB;
-    return mat4(
-        row4{b0[0], b0[1], b1[0], b1[1]},
-        row4{b0[2], b0[3], b1[2], b1[3]},
-        row4{b2[0], b2[1], b3[0], b3[1]},
-        row4{b2[2], b2[3], b3[2], b3[3]}
-    );
+    mat4 ret;
+
+    ret.data[0][0] = det *   ( data[1][1] * A2323 - data[1][2] * A1323 + data[1][3] * A1223 );
+    ret.data[0][1] = det * - ( data[0][1] * A2323 - data[0][2] * A1323 + data[0][3] * A1223 );
+    ret.data[0][2] = det *   ( data[0][1] * A2313 - data[0][2] * A1313 + data[0][3] * A1213 );
+    ret.data[0][3] = det * - ( data[0][1] * A2312 - data[0][2] * A1312 + data[0][3] * A1212 );
+    ret.data[1][0] = det * - ( data[1][0] * A2323 - data[1][2] * A0323 + data[1][3] * A0223 );
+    ret.data[1][1] = det *   ( data[0][0] * A2323 - data[0][2] * A0323 + data[0][3] * A0223 );
+    ret.data[1][2] = det * - ( data[0][0] * A2313 - data[0][2] * A0313 + data[0][3] * A0213 );
+    ret.data[1][3] = det *   ( data[0][0] * A2312 - data[0][2] * A0312 + data[0][3] * A0212 );
+    ret.data[2][0] = det *   ( data[1][0] * A1323 - data[1][1] * A0323 + data[1][3] * A0123 );
+    ret.data[2][1] = det * - ( data[0][0] * A1323 - data[0][1] * A0323 + data[0][3] * A0123 );
+    ret.data[2][2] = det *   ( data[0][0] * A1313 - data[0][1] * A0313 + data[0][3] * A0113 );
+    ret.data[2][3] = det * - ( data[0][0] * A1312 - data[0][1] * A0312 + data[0][3] * A0112 );
+    ret.data[3][0] = det * - ( data[1][0] * A1223 - data[1][1] * A0223 + data[1][2] * A0123 );
+    ret.data[3][1] = det *   ( data[0][0] * A1223 - data[0][1] * A0223 + data[0][2] * A0123 );
+    ret.data[3][2] = det * - ( data[0][0] * A1213 - data[0][1] * A0213 + data[0][2] * A0113 );
+    ret.data[3][3] = det *   ( data[0][0] * A1212 - data[0][1] * A0212 + data[0][2] * A0112 );
+
+    return ret;
 }
 
 #endif
