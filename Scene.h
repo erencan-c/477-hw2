@@ -16,8 +16,6 @@ public:
 	std::vector< Mesh > meshes;
 
 	Scene(const char *xmlPath);
-
-	void convertPPMToPNG(std::string ppmFileName, int osType);
 };
 
 #endif
