@@ -1,43 +1,10 @@
-#include <fstream>
 #include <string>
 #include <vector>
 #include <utility>
 #include "Scene.h"
 #include "mat4.hpp"
-
-int clamp_pixel_value(double value)
-{
-	if (value >= 255.0)
-		return 255;
-	if (value <= 0.0)
-		return 0;
-	return (int)(value);
-}
-
-void write_ppm(vec4** image_buffer, int width, int height, std::string filename)
-{
-	std::ofstream file;
-
-	file.open(filename.c_str());
-
-	file << "P3" << std::endl;
-	file << "# " << filename << std::endl;
-	file << width << " " << height << std::endl;
-	file << "255" << std::endl;
-
-	for (int j = height - 1; j >= 0; j--)
-	{
-		for (int i = 0; i < width; i++)
-		{
-			vec4 value = image_buffer[i][j];
-			file << clamp_pixel_value(value[0]) << " "
-				<< clamp_pixel_value(value[1]) << " "
-				<< clamp_pixel_value(value[2]) << " ";
-		}
-		file << std::endl;
-	}
-	file.close();
-}
+#include "ppm.hpp"
+#include "line.hpp"
 
 mat4 get_projection_matrix(Camera& c)
 {
@@ -80,85 +47,10 @@ mat4 get_viewport_matrix(Camera& c)
 	);
 }
 
-void draw_line(int x1, int y1, int x2, int y2, const vec4c start_color, const vec4c end_color, vec4** image_buffer, const int width, const int height)
-{
-	if (x1 > x2)
-	{
-		draw_line(x2, y2, x1, y1, end_color, start_color, image_buffer, width, height);
-		return;
-	}
-
-	int m = 0;
-	int dx = x2 - x1;
-	int dy = y2 - y1;
-	int d = dx - 2 * dy;
-	int new_d = dy - 2 * dx;
-	int y = y1;
-	int x = x1;
-	float line_slope = (float)dy / dx;
-
-	if (dy < 0)
-	{
-		m = -1;
-		dy = -dy;
-	}
-	else if (dy >= 0)
-	{
-		m = 1;
-	}
-
-	if (line_slope <= 1.0 && dx != 0)
-	{
-		for (x = x1; x < x2; x++)
-		{
-			//todo use line clipping (liang-barsky) here
-			if (x >= 0 && y >= 0 && x < width && y < height)
-				image_buffer[x][y] = vec4{ 255, 255, 255, 255 };
-
-			if (d <= 0)
-			{
-				y += m;
-				d += 2 * (dx - dy);
-			}
-			else
-			{
-				d += -2 * dy;
-			}
-		}
-
-	}
-	else
-	{
-		if (y1 > y2)
-			std::swap(y1, y2);
-
-		for (y = y1; y < y2; y++)
-		{
-			if (x >= 0 && y >= 0 && x < width && y < height)
-				image_buffer[x][y] = vec4{ 255, 255, 255, 255 };
-
-			if (new_d <= 0)
-			{
-				x += m;
-				new_d += 2 * (dy - dx);
-			}
-			else
-			{
-				new_d += -2 * dx;
-			}
-		}
-
-	}
-}
-
-
 void render_camera(Scene& scene, Camera& camera, vec4** image_buffer)
 {
 	mat4 proj_matrix = get_projection_matrix(camera);
 	mat4 viewport_matrix = get_viewport_matrix(camera);
-
-	draw_line( image_buffer, camera.width, camera.height);
-	//draw_line(80, 50, 90, 150, image_buffer, camera.width, camera.height);
 
 	for (auto& mesh : scene.meshes)
 	{
@@ -181,9 +73,10 @@ void render_camera(Scene& scene, Camera& camera, vec4** image_buffer)
 			}
 
 			auto v0 = tri.v[0], v1 = tri.v[1], v2 = tri.v[2];
-			draw_line(v0[0], v0[1], v1[0], v1[1], image_buffer, camera.width, camera.height);
-			draw_line(v1[0], v1[1], v2[0], v2[1], image_buffer, camera.width, camera.height);
-			draw_line(v2[0], v2[1], v0[0], v0[1], image_buffer, camera.width, camera.height);
+			auto v0_c = tri.color[0], v1_c = tri.color[1], v2_c = tri.color[2];
+			clip_line(v0[0], v0[1], v1[0], v1[1], v0_c, v1_c, image_buffer, camera.width, camera.height);
+			clip_line(v1[0], v1[1], v2[0], v2[1], v1_c, v2_c, image_buffer, camera.width, camera.height);
+			clip_line(v2[0], v2[1], v0[0], v0[1], v2_c, v0_c, image_buffer, camera.width, camera.height);
 		}
 	}
 }
@@ -210,7 +103,11 @@ int main(int argc, char *argv[])
         {
 			vec4** image_buffer = new vec4*[camera.width];
 			for (int i = 0; i < camera.width; i++)
+			{
 				image_buffer[i] = new vec4[camera.height];
+				for (int j = 0; j < camera.height; j++)
+					image_buffer[i][j] = scene.background_color;
+			}
 
 			render_camera(scene, camera, image_buffer);
 
