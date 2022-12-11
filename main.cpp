@@ -80,25 +80,21 @@ mat4 get_viewport_matrix(Camera& c)
 	);
 }
 
-void draw_line(int x1, int y1, int x2, int y2, vec4** image_buffer, int width, int height)
+void draw_line(int x1, int y1, int x2, int y2, const vec4c start_color, const vec4c end_color, vec4** image_buffer, const int width, const int height)
 {
 	if (x1 > x2)
 	{
-		draw_line(x2, y2, x1, y1, image_buffer, width, height);
+		draw_line(x2, y2, x1, y1, end_color, start_color, image_buffer, width, height);
 		return;
 	}
 
-
 	int m = 0;
-	int dx, dy, d, x, y;
-
-	dx = x2 - x1;
-	dy = y2 - y1;
-	d = dx - 2 * dy;
+	int dx = x2 - x1;
+	int dy = y2 - y1;
+	int d = dx - 2 * dy;
 	int new_d = dy - 2 * dx;
-	y = y1;
-	x = x1;
-
+	int y = y1;
+	int x = x1;
 	float line_slope = (float)dy / dx;
 
 	if (dy < 0)
@@ -111,56 +107,47 @@ void draw_line(int x1, int y1, int x2, int y2, vec4** image_buffer, int width, i
 		m = 1;
 	}
 
-	if (x1 == x2)
+	if (line_slope <= 1.0 && dx != 0)
 	{
-		if (y1 < y2)
+		for (x = x1; x < x2; x++)
 		{
-			std::swap(y1, y2);
+			//todo use line clipping (liang-barsky) here
+			if (x >= 0 && y >= 0 && x < width && y < height)
+				image_buffer[x][y] = vec4{ 255, 255, 255, 255 };
+
+			if (d <= 0)
+			{
+				y += m;
+				d += 2 * (dx - dy);
+			}
+			else
+			{
+				d += -2 * dy;
+			}
 		}
-		for (y = y2; y < y1; y++)
-		{
-			if (x1 >= 0 && y >= 0 && x1 < width && y < height)
-				image_buffer[x1][y] = vec4{ 255, 255, 255, 255 };
-		}
+
 	}
 	else
 	{
-		if (line_slope <= 1.0)
-		{
-			for (x = x1; x < x2; x++)
-			{
-				if (x >= 0 && y >= 0 && x < width && y < height)
-					image_buffer[x][y] = vec4{ 255, 255, 255, 255 };
+		if (y1 > y2)
+			std::swap(y1, y2);
 
-				if (d <= 0)
-				{
-					y += m;
-					d += 2 * (dx - dy);
-				}
-				else
-				{
-					d += -2 * dy;
-				}
+		for (y = y1; y < y2; y++)
+		{
+			if (x >= 0 && y >= 0 && x < width && y < height)
+				image_buffer[x][y] = vec4{ 255, 255, 255, 255 };
+
+			if (new_d <= 0)
+			{
+				x += m;
+				new_d += 2 * (dy - dx);
+			}
+			else
+			{
+				new_d += -2 * dx;
 			}
 		}
-		else
-		{
-			for (y = y1; y < y2; y++)
-			{
-				if (x >= 0 && y >= 0 && x < width && y < height)
-					image_buffer[x][y] = vec4{ 255, 255, 255, 255 };
 
-				if (new_d <= 0)
-				{
-					x += m;
-					new_d += 2 * (dy - dx);
-				}
-				else
-				{
-					new_d += -2 * dx;
-				}
-			}
-		}
 	}
 }
 
@@ -170,9 +157,8 @@ void render_camera(Scene& scene, Camera& camera, vec4** image_buffer)
 	mat4 proj_matrix = get_projection_matrix(camera);
 	mat4 viewport_matrix = get_viewport_matrix(camera);
 
-	draw_line(0, 0, 1, 500, image_buffer, camera.width, camera.height);
+	draw_line( image_buffer, camera.width, camera.height);
 	//draw_line(80, 50, 90, 150, image_buffer, camera.width, camera.height);
-	return;
 
 	for (auto& mesh : scene.meshes)
 	{
