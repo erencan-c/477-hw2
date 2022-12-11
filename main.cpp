@@ -8,27 +8,39 @@
 
 mat4 get_projection_matrix(Camera& c)
 {
-	mat4 vp;
+	mat4 vp = mat4::identity();
 	double l = c.left, r = c.right, t = c.top, b = c.bottom;
 	double n = c.near, f = c.far;
+	vec4 u = c.u, v = c.v, w = c.w, e = c.pos;
+	u[3] = 0, v[3] = 0, w[3] = 0, e[3] = 0;
 
-	mat4c orth = mat4(
+	mat4c cam = mat4c(
+		row4{ u[0], u[1], u[2], -dot4(u, e)},
+		row4{ v[0], v[1], v[2], -dot4(v, e)},
+		row4{ w[0], w[1], w[2], -dot4(w, e)},
+		row4{ 0, 0, 0, 1 }
+	);
+
+	mat4c orth = mat4c(
 		row4{ 2.0 / (r - l), 0, 0, -((r + l) / (r - l)) },
 		row4{ 0, 2.0 / (t - b), 0, -((t + b) / (t - b)) },
 		row4{ 0, 0, -2.0 / (f - n), -((f + n) / (f - n)) },
 		row4{ 0, 0, 0, 1 }
 	);
-	vp = orth * vp;
 
-	if (c.projection_type == PERSPECTIVE)
+	if (c.projection_type == ORTHOGRAPHIC)
 	{
-		mat4c pers = mat4(
+		vp = orth * cam * vp;
+	}
+	else
+	{
+		mat4c per = mat4(
 			row4{ (2 * n) / (r - l), 0, (r + l) / (r - l), 0 },
 			row4{ 0, (2 * n) / (t - b), (t + b) / (t - b), 0 },
 			row4{ 0, 0, -(f + n) / (f - n), -(2 * f * n) / (f - n) },
 			row4{ 0, 0, -1, 0 }
 		);
-		vp = vp * pers;
+		vp = per * cam * vp;
 	}
 
 	return vp;
@@ -61,8 +73,9 @@ void render_camera(Scene& scene, Camera& camera, vec4** image_buffer)
 				coord = proj_matrix * coord;
 
 			//perspective divide
-			for (auto& coord : tri.v)
-				coord /= coord[3];
+			if (camera.projection_type == PERSPECTIVE)
+				for (auto& coord : tri.v)
+					coord /= coord[3];
 
 			//viewport transformation
 			for (auto& coord : tri.v)
