@@ -18,6 +18,24 @@ typedef const float cfloat;
 typedef std::array<double,4> arr4;
 typedef const arr4 arr4c;
 
+// --------------------------------------------------------------- //
+// a x b: Cross product of vector a with vector b                  //
+// Notes:                                                          //
+//    - Vectors a and b should be of type __m256d                  //
+// Summary:                                                        //  
+//      This macro consists of a one-liner to compute the cross    //
+//    product of vectors a and b by shuffling the elements in each //
+//    vector and multiplying it with the other. It then subtracts  //
+//    the two resultant vectors and shuffles the difference into   //
+//    into the returned vector.                                    // 
+// --------------------------------------------------------------- //
+#define CROSS_PRODUCT(a,b) _mm256_permute4x64_pd(\
+		_mm256_sub_pd(\
+			_mm256_mul_pd(a, _mm256_permute4x64_pd(b, _MM_SHUFFLE(3, 0, 2, 1))),\
+			_mm256_mul_pd(b, _mm256_permute4x64_pd(a, _MM_SHUFFLE(3, 0, 2, 1)))\
+		), _MM_SHUFFLE(3, 0, 2, 1)\
+	)
+
 static inline double dot4(vec4c lhs, vec4c rhs) {
    auto multiplied = lhs * rhs;
    auto sum = _mm256_hadd_pd(multiplied, multiplied);

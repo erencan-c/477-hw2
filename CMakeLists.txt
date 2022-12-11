@@ -7,7 +7,7 @@ project ("477-hw2")
 
 # Add source to this project's executable.
 file (GLOB a_src "*.h" "*.cpp")
-add_compile_options(-mavx)
+add_compile_options(-mavx2)
 add_executable (477-hw2  ${a_src})
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

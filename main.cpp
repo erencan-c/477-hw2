@@ -48,8 +48,6 @@ mat4 get_projection_matrix(Camera& c)
 
 mat4 get_viewport_matrix(Camera& c)
 {
-	double l = c.left, r = c.right, t = c.top, b = c.bottom;
-	double n = c.near, f = c.far;
 	double nx = c.width, ny = c.height;
 	return mat4(
 		row4{ nx / 2.0, 0, 0, (nx - 1.0) / 2.0 },
@@ -85,6 +83,7 @@ void render_camera(Scene& scene, Camera& camera, vec4** image_buffer)
 				coord[1] += 0.5;
 			}
 
+			//draw
 			auto v0 = tri.v[0], v1 = tri.v[1], v2 = tri.v[2];
 			auto v0_c = tri.color[0], v1_c = tri.color[1], v2_c = tri.color[2];
 			clip_line(v0[0], v0[1], v1[0], v1[1], v0_c, v1_c, image_buffer, camera.width, camera.height);

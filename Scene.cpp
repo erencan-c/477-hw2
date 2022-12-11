@@ -57,6 +57,8 @@ Scene::Scene(const char *xmlPath)
 	while (pCamera != NULL)
 	{
 		Camera cam;
+		cam.gaze[3] = 0;
+		cam.v[3] = 0;
 
 		{
 			int zort;
@@ -86,11 +88,11 @@ Scene::Scene(const char *xmlPath)
 		sscanf(str, "%lf %lf %lf", &cam.v[0], &cam.v[1], &cam.v[2]);
 
 		cam.gaze = normalize4(cam.gaze);
-		cam.u = cross4(cam.gaze, cam.v);
+		cam.u = CROSS_PRODUCT(cam.gaze, cam.v);
 		cam.u = normalize4(cam.u);
 
 		cam.w = -cam.gaze;
-		cam.v = cross4(cam.u, cam.gaze);
+		cam.v = CROSS_PRODUCT(cam.u, cam.gaze);
 		cam.v = normalize4(cam.v);
 
 		camElement = pCamera->FirstChildElement("ImagePlane");
@@ -117,6 +119,8 @@ Scene::Scene(const char *xmlPath)
 	{
 		vec4 vertex;
 		vec4 color;
+		vertex[3] = 1;
+		color[3] = 255;
 
 		str = pVertex->Attribute("position");
 		sscanf(str, "%lf %lf %lf", &vertex[0], &vertex[1], &vertex[2]);
@@ -252,10 +256,11 @@ Scene::Scene(const char *xmlPath)
 			int result = sscanf(row, "%d %d %d", &v1, &v2, &v3);
 			
 			if (result != EOF) {
-				mesh.triangles.push_back(Triangle{
+				v1--, v2--, v3--;
+				auto tri = Triangle{
 					{composite_transformation * v[v1].first, composite_transformation * v[v2].first, composite_transformation * v[v3].first},
-					{v[v1].second, v[v2].second, v[v3].second}
-				});
+					{v[v1].second, v[v2].second, v[v3].second} };
+				mesh.triangles.push_back(tri);
 			}
 			row = strtok(NULL, "\n");
 		}
