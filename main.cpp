@@ -5,6 +5,7 @@
 #include "mat4.hpp"
 #include "ppm.hpp"
 #include "line.hpp"
+#include <cfloat>
 
 mat4 get_projection_matrix(Camera& c)
 {
@@ -69,6 +70,49 @@ vec4 get_triangle_center(const Triangle& tri)
 	return (tri.v[0] + tri.v[1] + tri.v[2]) / 3.0;
 }
 
+std::pair<vec4, vec4> get_triangle_bounds(const Triangle& tri)
+{
+	vec4 curmin = vec4{ DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX }, curmax = {DBL_MIN, DBL_MIN, DBL_MIN, DBL_MIN };
+
+	curmin = min4(curmin, tri.v[0]);
+	curmin = min4(curmin, tri.v[1]);
+	curmin = min4(curmin, tri.v[2]);
+
+	curmax = max4(curmax, tri.v[0]);
+	curmax = max4(curmax, tri.v[1]);
+	curmax = max4(curmax, tri.v[2]);
+
+	return { curmin, curmax };
+}
+
+double sample_line_equation(vec4c v0, vec4c v1, double x, double y)
+{
+	double x0 = v0[0], y0 = v0[1], x1 = v1[0], y1 = v1[1];
+	return x * (y0 - y1) + y * (x1 - x0) + (x0 * y1) - (y0 * x1);
+}
+
+void draw_solid(const Triangle& tri, vec4** image_buffer, int width, int height)
+{
+	auto v0 = tri.v[0], v1 = tri.v[1], v2 = tri.v[2];
+	auto v0_c = tri.color[0], v1_c = tri.color[1], v2_c = tri.color[2];
+	auto [minb, maxb] = get_triangle_bounds(tri);
+	for (int x = minb[0]; x < maxb[0]; x++)
+	{
+		for (int y = minb[1]; y < maxb[1]; y++)
+		{
+			double alpha = sample_line_equation(v1, v2, x, y) / sample_line_equation(v1, v2, v0[0], v0[1]);
+			double beta = sample_line_equation(v2, v0, x, y) / sample_line_equation(v2, v0, v1[0], v1[1]);
+			double gamma = sample_line_equation(v0, v1, x, y) / sample_line_equation(v0, v1, v2[0], v2[1]);
+
+			if (alpha >= 0 && beta >= 0 && gamma >= 0 && x >= 0 && y >= 0 && x < width && y < height)
+			{
+				vec4 intp_color = alpha * v0_c + beta * v1_c + gamma * v2_c;
+				image_buffer[x][y] = intp_color;
+			}
+		}
+	}
+}
+
 void render_camera(Scene& scene, Camera& camera, vec4** image_buffer)
 {
 	mat4 proj_matrix = get_projection_matrix(camera);
@@ -99,8 +143,10 @@ void render_camera(Scene& scene, Camera& camera, vec4** image_buffer)
 		{
 			if (scene.culling_enabled)
 			{
-				auto norm = get_triangle_normal(tri);
-				if (dot4(norm, camera.pos - get_triangle_center(tri)) <= 0.0)
+				auto cull = dot4(get_triangle_normal(tri), camera.pos - get_triangle_center(tri)) <= 0.0;
+				if (camera.projection_type == ORTHOGRAPHIC)
+					cull = !cull;
+				if (cull)
 					continue;
 			}
 
@@ -121,16 +167,19 @@ void render_camera(Scene& scene, Camera& camera, vec4** image_buffer)
 				coord[1] += 0.5;
 			}
 
-			//draw wireframe
-			auto v0 = tri.v[0], v1 = tri.v[1], v2 = tri.v[2];
-			auto v0_c = tri.color[0], v1_c = tri.color[1], v2_c = tri.color[2];
-			clip_line(v0[0], v0[1], v1[0], v1[1], v0_c, v1_c, image_buffer, camera.width, camera.height);
-			clip_line(v1[0], v1[1], v2[0], v2[1], v1_c, v2_c, image_buffer, camera.width, camera.height);
-			clip_line(v2[0], v2[1], v0[0], v0[1], v2_c, v0_c, image_buffer, camera.width, camera.height);
-
-			if (mesh.type == SOLID)
+			if (mesh.type == WIREFRAME)
 			{
-				//TODO: solid fill
+				//draw wireframe
+				auto v0 = tri.v[0], v1 = tri.v[1], v2 = tri.v[2];
+				auto v0_c = tri.color[0], v1_c = tri.color[1], v2_c = tri.color[2];
+				clip_line(v0[0], v0[1], v1[0], v1[1], v0_c, v1_c, image_buffer, camera.width, camera.height);
+				clip_line(v1[0], v1[1], v2[0], v2[1], v1_c, v2_c, image_buffer, camera.width, camera.height);
+				clip_line(v2[0], v2[1], v0[0], v0[1], v2_c, v0_c, image_buffer, camera.width, camera.height);
+			}
+			else
+			{
+				//draw solid
+				draw_solid(tri, image_buffer, camera.width, camera.height);
 			}
 		}
 	}
@@ -167,7 +216,7 @@ int main(int argc, char *argv[])
 			render_camera(scene, camera, image_buffer);
 
 			write_ppm(image_buffer, camera.width, camera.height, camera.output_file_name);
-			ppm_to_png(camera.output_file_name);
+			//ppm_to_png(camera.output_file_name);
         }
 
         return EXIT_SUCCESS;

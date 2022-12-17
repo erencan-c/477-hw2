@@ -65,15 +65,11 @@ static inline vec4 pow4(vec4c lhs, vec4c rhs) {
 }
 
 static inline vec4 min4(vec4c lhs, vec4c rhs) {
-   arr4c lhsa = amake(lhs);
-   arr4c rhsa = amake(rhs);
-   return vec4{fmin(lhsa[0], rhsa[0]), fmin(lhsa[1], rhsa[1]), fmin(lhsa[2], rhsa[2]), fmin(lhsa[3], rhsa[3])};
+   return vec4{fmin(lhs[0], rhs[0]), fmin(lhs[1], rhs[1]), fmin(lhs[2], rhs[2]), fmin(lhs[3], rhs[3])};
 }
 
 static inline vec4 max4(vec4c lhs, vec4c rhs) {
-   arr4c lhsa = amake(lhs);
-   arr4c rhsa = amake(rhs);
-   return vec4{fmax(lhsa[0], rhsa[0]), fmax(lhsa[1], rhsa[1]), fmax(lhsa[2], rhsa[2]), fmax(lhsa[3], rhsa[3])};
+   return vec4{fmax(lhs[0], rhs[0]), fmax(lhs[1], rhs[1]), fmax(lhs[2], rhs[2]), fmax(lhs[3], rhs[3])};
 }
 
 #endif

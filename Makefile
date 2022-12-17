@@ -6,7 +6,7 @@ RUNNER=
 
 INCDIR=.
 SRCDIR=.
-OBJDIR=obj
+OBJDIR=.
 BUILDDIR=.
 BINDIR=.
 SRCS = $(wildcard $(SRCDIR)/*.$(SRC_EXTENSION))
@@ -14,16 +14,11 @@ OBJS = $(patsubst $(SRCDIR)/%.$(SRC_EXTENSION), $(OBJDIR)/%.$(OBJ_EXTENSION), $(
 DEPENDS = $(patsubst $(SRCDIR)/%.$(SRC_EXTENSION),%.d,$(SRCS))
 HEADERS = $(wildcard $(INCDIR)/*.h)
 
-CFLAGS=-I"./$(INCDIR)" -O3 -Wno-ignored-attributes -fopenmp -flto -mavx
+CFLAGS=-I"./$(INCDIR)" -O3 -Wno-ignored-attributes -fopenmp -flto -mavx2
 LDFLAGS=$(CFLAGS) -fPIC -lm -O3 -fopenmp
 
 EXECNAME=rasterizer
 ARGS=
-
-run: rasterizer
-	@echo RUNNING $(RUNNER) ./$(BINDIR)/$(EXECNAME) $(ARGS)
-	@echo ================
-	@$(RUNNER) ./$(BINDIR)/$(EXECNAME) $(ARGS)
 
 rasterizer: $(OBJS)
 	@$(COMPILER) $(filter-out %.h,$^) -o $(BINDIR)/$(EXECNAME) $(LDFLAGS)

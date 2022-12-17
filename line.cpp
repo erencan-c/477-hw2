@@ -107,9 +107,9 @@ void clip_line(float x1, float y1, float x2, float y2, vec4 start_color, vec4 en
 	float p4 = -p3;
 
 	float q1 = x1;
-	float q2 = width - x1;
+	float q2 = width - x1 - 1;
 	float q3 = y1;
-	float q4 = height - y1;
+	float q4 = height - y1 - 1;
 
 	float posarr[5], negarr[5];
 	int posind = 1, negind = 1;
@@ -167,5 +167,7 @@ void clip_line(float x1, float y1, float x2, float y2, vec4 start_color, vec4 en
 	yn2 = y1 + p4 * rn2;
 
 	//TODO fix color interpolation here (parts of the line may not be drawn yet color starts at start_color)
-	draw_line(xn1, yn1, xn2, yn2, start_color, end_color, image_buffer, width, height);
+	auto fixed_start_color = lerp_color(xn1, x1, x2, start_color, end_color);
+	auto fixed_end_color = lerp_color(xn2, x1, x2, start_color, end_color);
+	draw_line(xn1, yn1, xn2, yn2, fixed_start_color, fixed_end_color, image_buffer, width, height);
 }
