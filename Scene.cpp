@@ -88,11 +88,11 @@ Scene::Scene(const char *xmlPath)
 		sscanf(str, "%lf %lf %lf", &cam.v[0], &cam.v[1], &cam.v[2]);
 
 		cam.gaze = normalize4(cam.gaze);
-		cam.u = CROSS_PRODUCT(cam.gaze, cam.v);
+		cam.u = cross4(cam.gaze, cam.v);
 		cam.u = normalize4(cam.u);
 
 		cam.w = -cam.gaze;
-		cam.v = CROSS_PRODUCT(cam.u, cam.gaze);
+		cam.v = cross4(cam.u, cam.gaze);
 		cam.v = normalize4(cam.v);
 
 		camElement = pCamera->FirstChildElement("ImagePlane");

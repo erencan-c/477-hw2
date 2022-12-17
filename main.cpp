@@ -57,15 +57,53 @@ mat4 get_viewport_matrix(Camera& c)
 	);
 }
 
+vec4 get_triangle_normal(const Triangle& tri)
+{
+	auto edge1 = tri.v[2] - tri.v[0];
+	auto edge2 = tri.v[1] - tri.v[0];
+	return cross4(edge2, edge1);
+}
+
+vec4 get_triangle_center(const Triangle& tri)
+{
+	return (tri.v[0] + tri.v[1] + tri.v[2]) / 3.0;
+}
+
 void render_camera(Scene& scene, Camera& camera, vec4** image_buffer)
 {
 	mat4 proj_matrix = get_projection_matrix(camera);
 	mat4 viewport_matrix = get_viewport_matrix(camera);
 
+	/*
+	clip_line(350, 350, 350, 699, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 525, 699, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 699, 699, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 699, 525, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 699, 350, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 699, 175, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 699, 0, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 525, 0, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 350, 0, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 175, 0, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 0, 0, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 0, 175, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 0, 350, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 0, 525, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 0, 699, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	clip_line(350, 350, 175, 699, vec4{ 0,0,0,1 }, vec4{ 0,0,0,1 }, image_buffer, camera.width, camera.height);
+	*/
+	
 	for (auto& mesh : scene.meshes)
 	{
 		for (auto tri : mesh.triangles)
 		{
+			if (scene.culling_enabled)
+			{
+				auto norm = get_triangle_normal(tri);
+				if (dot4(norm, camera.pos - get_triangle_center(tri)) <= 0.0)
+					continue;
+			}
+
 			//projection
 			for (auto& coord : tri.v) 
 				coord = proj_matrix * coord;
@@ -83,12 +121,17 @@ void render_camera(Scene& scene, Camera& camera, vec4** image_buffer)
 				coord[1] += 0.5;
 			}
 
-			//draw
+			//draw wireframe
 			auto v0 = tri.v[0], v1 = tri.v[1], v2 = tri.v[2];
 			auto v0_c = tri.color[0], v1_c = tri.color[1], v2_c = tri.color[2];
 			clip_line(v0[0], v0[1], v1[0], v1[1], v0_c, v1_c, image_buffer, camera.width, camera.height);
 			clip_line(v1[0], v1[1], v2[0], v2[1], v1_c, v2_c, image_buffer, camera.width, camera.height);
 			clip_line(v2[0], v2[1], v0[0], v0[1], v2_c, v0_c, image_buffer, camera.width, camera.height);
+
+			if (mesh.type == SOLID)
+			{
+				//TODO: solid fill
+			}
 		}
 	}
 }

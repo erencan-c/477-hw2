@@ -82,7 +82,8 @@ public:
         );
     }
 
-    static inline mat4 rotation(vec4 p2, cdouble angle) {
+    static inline mat4 rotation(vec4 p2, cdouble _angle) {
+        cdouble angle = _angle * M_PI / 180.0;
         p2[3] = 0;
         vec4c ux{p2[0], 0, 0, 0};
         vec4c uy{0, p2[1], 0, 0};

@@ -6,7 +6,7 @@ vec4 lerp_color(float cur, float min, float max, vec4 start, vec4 end)
 	return (1 - alpha) * start + alpha * end;
 }
 
-void draw_line(int x1, int y1, int x2, int y2, const vec4c start_color, const vec4c end_color, vec4** image_buffer, const int width, const int height)
+void draw_line(int x1, int y1, int x2, int y2, vec4 start_color, vec4 end_color, vec4** image_buffer, const int width, const int height)
 {
 	if (x1 > x2)
 	{
@@ -14,6 +14,7 @@ void draw_line(int x1, int y1, int x2, int y2, const vec4c start_color, const ve
 		return;
 	}
 
+	int draw_test = 0;
 	int m = 0;
 	int dx = x2 - x1;
 	int dy = y2 - y1;
@@ -33,11 +34,12 @@ void draw_line(int x1, int y1, int x2, int y2, const vec4c start_color, const ve
 		m = 1;
 	}
 
-	if (line_slope <= 1.0 && dx != 0)
+	if (line_slope > -1.0 && line_slope <= 1.0 && dx != 0)
 	{
 		for (x = x1; x < x2; x++)
 		{
-			image_buffer[x][y] = lerp_color(x, x1, x2, start_color, end_color);
+			if (x >= 0)
+				image_buffer[x][y] = lerp_color(x, x1, x2, start_color, end_color);
 
 			if (d <= 0)
 			{
@@ -54,11 +56,16 @@ void draw_line(int x1, int y1, int x2, int y2, const vec4c start_color, const ve
 	else
 	{
 		if (y1 > y2)
+		{
+			x = x2;
+			std::swap(start_color, end_color);
 			std::swap(y1, y2);
+		}
 
 		for (y = y1; y < y2; y++)
 		{
-			image_buffer[x][y] = lerp_color(y, y1, y2, start_color, end_color);
+			if (x >= 0)
+				image_buffer[x][y] = lerp_color(y, y1, y2, start_color, end_color);
 
 			if (new_d <= 0)
 			{
@@ -72,7 +79,7 @@ void draw_line(int x1, int y1, int x2, int y2, const vec4c start_color, const ve
 		}
 
 	}
-}
+}  
 
 float maxi(float arr[], int n)
 {

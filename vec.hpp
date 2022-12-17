@@ -7,7 +7,7 @@
 #include <iostream>
 #include <immintrin.h>
 
-#define EPISLON 1e-9
+#define EPSILON 1e-9
 #include <array>
 
 typedef __m256d vec4;
@@ -18,44 +18,20 @@ typedef const float cfloat;
 typedef std::array<double,4> arr4;
 typedef const arr4 arr4c;
 
-// --------------------------------------------------------------- //
-// a x b: Cross product of vector a with vector b                  //
-// Notes:                                                          //
-//    - Vectors a and b should be of type __m256d                  //
-// Summary:                                                        //  
-//      This macro consists of a one-liner to compute the cross    //
-//    product of vectors a and b by shuffling the elements in each //
-//    vector and multiplying it with the other. It then subtracts  //
-//    the two resultant vectors and shuffles the difference into   //
-//    into the returned vector.                                    // 
-// --------------------------------------------------------------- //
-#define CROSS_PRODUCT(a,b) _mm256_permute4x64_pd(\
-		_mm256_sub_pd(\
-			_mm256_mul_pd(a, _mm256_permute4x64_pd(b, _MM_SHUFFLE(3, 0, 2, 1))),\
-			_mm256_mul_pd(b, _mm256_permute4x64_pd(a, _MM_SHUFFLE(3, 0, 2, 1)))\
-		), _MM_SHUFFLE(3, 0, 2, 1)\
-	)
-
 static inline double dot4(vec4c lhs, vec4c rhs) {
    auto multiplied = lhs * rhs;
    auto sum = _mm256_hadd_pd(multiplied, multiplied);
    auto sum_high = _mm256_extractf128_pd(sum, 1);
    return (sum_high + _mm256_castpd256_pd128(sum))[0];
-   // auto lo_dual = multiplied;
-   // auto hi_dual = _mm256_movehl_ps(multiplied, multiplied);
-   // auto sum_dual = lo_dual + hi_dual;
-   // auto lo = sum_dual;
-   // auto hi = _mm_shuffle_ps(sum_dual, sum_dual, 0x1);
-   // auto sum = lo + hi;
-   // return _mm_cvtss_f32(sum);
 }
 
-static inline vec4 cross4(vec4c lhs, vec4c rhs) {
-   auto tmp0 = _mm256_shuffle_pd(lhs, lhs, _MM_SHUFFLE(3,0,2,1));
-   auto tmp2 = _mm256_shuffle_pd(lhs, lhs, _MM_SHUFFLE(3,1,0,2));
-   auto tmp1 = _mm256_shuffle_pd(rhs, rhs, _MM_SHUFFLE(3,1,0,2));
-   auto tmp3 = _mm256_shuffle_pd(rhs, rhs, _MM_SHUFFLE(3,0,2,1));
-   return tmp0*tmp1 - tmp2*tmp3;
+static inline vec4 cross4(vec4c a, vec4c b) {
+	return _mm256_permute4x64_pd(\
+		_mm256_sub_pd(\
+			_mm256_mul_pd(a, _mm256_permute4x64_pd(b, _MM_SHUFFLE(3, 0, 2, 1))), \
+			_mm256_mul_pd(b, _mm256_permute4x64_pd(a, _MM_SHUFFLE(3, 0, 2, 1)))\
+		), _MM_SHUFFLE(3, 0, 2, 1)\
+	);
 }
 
 static inline float len4f(vec4c self) {
